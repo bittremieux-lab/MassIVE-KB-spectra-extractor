@@ -17,18 +17,16 @@ process DOWNLOAD_METADATA{
 }
 
 process GROUP_TSV{
-    scratch true
-
     input:
         path psms_tsv
         val group_column
 
     output:
-        path "group_*.tsv", emit: group_files
+        path "groups"
 
     script:
     """
-    group_tsv.py $psms_tsv $group_column
+    group_tsv.py $psms_tsv $group_column "groups"
     """
 }
 
@@ -68,7 +66,10 @@ process MERGE_MGFS {
 
 workflow extract_psms{
     metadata_tsv = DOWNLOAD_METADATA(params.task_id)
-    mzml_groups = GROUP_TSV(metadata_tsv, "filename").flatten()
+    mzml_groups_dir = GROUP_TSV(metadata_tsv, "filename")
+
+    mzml_groups = mzml_groups_dir.flatMap { dir -> file("${dir}/*") }
+
     mgf_files = MZML_GROUP_TO_MGF(mzml_groups)
     merged_mgf = MERGE_MGFS(mgf_files.collect(), params.task_id)
 }
