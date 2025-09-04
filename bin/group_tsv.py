@@ -2,12 +2,13 @@
 
 import re
 import sys
+
 import pandas as pd
 from tqdm import tqdm
 
 
 def group_tsv(tsv_file_path, group_column):
-    tsv_df = pd.read_csv(tsv_file_path, sep="\t", nrows=10)
+    tsv_df = pd.read_csv(tsv_file_path, sep="\t")
     print("Opened tsv file:", tsv_file_path)
     for column_val, grp in tqdm(tsv_df.groupby(group_column)):
         grp.to_csv(

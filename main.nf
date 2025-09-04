@@ -17,6 +17,8 @@ process DOWNLOAD_METADATA{
 }
 
 process GROUP_TSV{
+    scratch: true
+    
     input:
         path psms_tsv
         val group_column
