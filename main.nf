@@ -24,7 +24,7 @@ process GROUP_TSV{
         val group_column
 
     output:
-        path "group_*.tsv"
+        path "group_*.tsv", emit: group_files
 
     script:
     """
