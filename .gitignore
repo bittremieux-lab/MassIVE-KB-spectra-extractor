@@ -6,3 +6,5 @@
 work/
 *.log
 *.log.*
+
+results/
