@@ -72,8 +72,9 @@ def process_mzml_group(tsv_file_path):
     except error_perm as e:
         mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
         Path(f"{tsv_file_path}.failed").write_text(
-            f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed."
+            f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed.\n"
         )
+        raise e
 
     if mzml_file.endswith(".mzML"):
         parser = mzml.MzML
