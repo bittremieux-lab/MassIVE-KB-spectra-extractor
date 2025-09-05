@@ -67,11 +67,13 @@ def process_mzml_group(tsv_file_path):
     mzml_file = df.loc[0, "filename"]
     local_file = Path(mzml_file).name
 
-    if "ccms_peak" in mzml_file:
-        massivekb_version = "z01"
-    else:
-        massivekb_version = "v01"
-    download_ftp(mzml_file=mzml_file, local_path=local_file)
+    try:
+        download_ftp(mzml_file=mzml_file, local_path=local_file)
+    except error_perm as e:
+        mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
+        Path(f"{tsv_file_path}.failed").write_text(
+            f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed."
+        )
 
     if mzml_file.endswith(".mzML"):
         parser = mzml.MzML

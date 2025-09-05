@@ -39,6 +39,9 @@ process MZML_GROUP_TO_MGF{
 
     output:
         path "*.mgf"
+        path "*.failed" optional true
+
+    errorStrategy 'ignore'
 
     script:
     """
@@ -64,12 +67,35 @@ process MERGE_MGFS {
     """
 }
 
+process MERGE_FAILED_LOGS {
+    tag "merge_failed"
+
+    input:
+        path failed_logs
+
+    output:
+        path "all_failed_logs.txt"
+
+    publishDir "results", mode: 'copy'  // or 'move' if you want to save space
+
+    script:
+    """
+    cat $failed_logs > all_failed_logs.txt
+    """
+}
+
+
 workflow extract_psms{
     metadata_tsv = DOWNLOAD_METADATA(params.task_id)
     mzml_groups_dir = GROUP_TSV(metadata_tsv, "filename")
 
     mzml_groups = mzml_groups_dir.flatMap { dir -> file("${dir}/*") }
 
-    mgf_files = MZML_GROUP_TO_MGF(mzml_groups)
+    mgf_and_fails = MZML_GROUP_TO_MGF(mzml_groups)
+    mgf_files = mgf_and_fails[0]
+    failed_logs = mgf_and_fails[1]
+
     merged_mgf = MERGE_MGFS(mgf_files.collect(), params.task_id)
+    failed_summary = MERGE_FAILED_LOGS(failed_logs.collect())
+    failed_summary.view()
 }
