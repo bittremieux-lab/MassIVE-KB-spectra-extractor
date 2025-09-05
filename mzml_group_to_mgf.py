@@ -106,6 +106,9 @@ def process_mzml_group(tsv_file_path):
         use_numpy=True,
     )
 
+    if Path(local_file).exists():
+        Path(local_file).unlink()
+
 
 tsv_file_path = sys.argv[1]
 process_mzml_group(tsv_file_path)
