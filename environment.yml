@@ -1,0 +1,10 @@
+name: nf-mkb
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - nextflow
+  - pandas
+  - pyteomics
+  - tqdm

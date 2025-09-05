@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 import sys
-from ftplib import FTP
+from ftplib import FTP, error_perm
 from pathlib import Path
 
 import pandas as pd
 from pyteomics import mzml, mzxml, mgf
 
 
-def download_ftp(host="massive-ftp.ucsd.edu", remote_path=None, local_path=None):
+def _download(mskb_version, mzml_file, ftp_host, out_f):
+    remote_path = f"{mskb_version}/{mzml_file}"
+    ftp_host.retrbinary(f"RETR {remote_path}", out_f.write)
+
+
+def download_ftp(host="massive-ftp.ucsd.edu", mzml_file=None, local_path=None):
     with FTP(host) as ftp:
         ftp.login()  # Anonymous login
         with open(local_path, "wb") as f:
-            ftp.retrbinary(f"RETR {remote_path}", f.write)
+            mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
+            try:
+                _download(mskb_version, mzml_file, ftp, f)
+            except error_perm as e:
+                _download("x01", mzml_file, ftp, f)
 
 
 def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
@@ -62,7 +71,7 @@ def process_mzml_group(tsv_file_path):
         massivekb_version = "z01"
     else:
         massivekb_version = "v01"
-    download_ftp(remote_path=f"{massivekb_version}/{mzml_file}", local_path=local_file)
+    download_ftp(mzml_file=mzml_file, local_path=local_file)
 
     if mzml_file.endswith(".mzML"):
         parser = mzml.MzML
