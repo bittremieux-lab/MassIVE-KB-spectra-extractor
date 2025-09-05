@@ -32,7 +32,6 @@ process GROUP_TSV{
 
 process MZML_GROUP_TO_MGF{
     maxForks 5
-    scratch true
 
     input:
         path mzml_group_tsv
@@ -45,7 +44,7 @@ process MZML_GROUP_TO_MGF{
 
     script:
     """
-    mzml_group_to_mgf.py $mzml_group_tsv
+    python ${projectDir}/mzml_group_to_mgf.py $mzml_group_tsv
     """
 }
 
