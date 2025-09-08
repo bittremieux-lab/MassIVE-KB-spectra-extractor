@@ -101,7 +101,7 @@ def process_mzml_group(tsv_file_path):
             mzml_spectrum_to_mgf(s, local_file, pep, scan)
             for s, pep, scan in zip(spectra, df["annotation"], df["scan"])
         ],
-        f"{local_file}.mgf",
+        f"{tsv_file_path}.mgf",
         fragment_format="%.5f %.1f",
         use_numpy=True,
     )
