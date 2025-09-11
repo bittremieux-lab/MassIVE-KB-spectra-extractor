@@ -60,7 +60,8 @@ process MERGE_MGFS {
 
     script:
     """
-    find . -maxdepth 1 -name "*.mgf" -print0 | xargs -0 cat > massiveKB_${task_id}.mgf
+    find . -maxdepth 1 -name "*.mgf" ! -name "massiveKB_${task_id}.mgf" -print0 \
+    | xargs -0 cat > massiveKB_${task_id}.mgf
     """
 }
 
@@ -92,7 +93,8 @@ workflow extract_psms{
     mgf_files = mgf_and_fails[0]
     failed_logs = mgf_and_fails[1]
 
-    merged_mgf = MERGE_MGFS(mgf_files.collect(), params.task_id)
     failed_summary = MERGE_FAILED_LOGS(failed_logs.collect())
     failed_summary.view()
+
+    merged_mgf = MERGE_MGFS(mgf_files.collect(), params.task_id)
 }
