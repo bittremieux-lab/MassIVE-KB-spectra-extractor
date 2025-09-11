@@ -62,7 +62,7 @@ process MERGE_MGFS {
 
     script:
     """
-    cat $mgf_files > "massiveKB_${task_id}.mgf"
+    cat *.mgf > "massiveKB_${task_id}.mgf"
     """
 }
 
