@@ -56,7 +56,7 @@ process MERGE_MGFS {
     output:
         path "massiveKB_${task_id}.mgf"
 
-    publishDir "results", mode: 'move'
+    publishDir "results", mode: 'symlink'
 
     script:
     """
@@ -92,6 +92,8 @@ workflow extract_psms{
     mgf_and_fails = MZML_GROUP_TO_MGF(mzml_groups)
     mgf_files = mgf_and_fails[0]
     failed_logs = mgf_and_fails[1]
+    
+    failed_logs.view("Failed logs channel contains:")
 
     failed_summary = MERGE_FAILED_LOGS(failed_logs.collect())
     failed_summary.view()

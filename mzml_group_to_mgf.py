@@ -91,9 +91,10 @@ def process_mzml_group(tsv_file_path):
     try:
         spectra = mzml_reader.get_by_ids(formatted_scan_numbers)
     except KeyError:
-        print(
+        Path(f"{tsv_file_path}.failed").write_text(
             f"Trying to get {formatted_scan_numbers} from {mzml_file} resulted in a KeyError"
         )
+        print(f"Wrote {tsv_file_path}.failed")
         raise
 
     mgf.write(
