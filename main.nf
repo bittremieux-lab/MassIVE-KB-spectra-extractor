@@ -49,8 +49,6 @@ process MZML_GROUP_TO_MGF{
 }
 
 process MERGE_MGFS {
-    scratch true
-
     input:
         path mgf_files
         val task_id
