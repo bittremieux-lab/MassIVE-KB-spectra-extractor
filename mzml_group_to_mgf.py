@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 import sys
 from ftplib import FTP, error_perm
 from pathlib import Path
@@ -67,15 +67,26 @@ def process_mzml_group(tsv_file_path):
     mzml_file = df.loc[0, "filename"]
     local_file = Path(mzml_file).name
 
+    # Create persistent failed logs directory in the main pipeline directory
+    # Get pipeline directory from environment variable set by Nextflow
+    import os
+
+    pipeline_dir = Path(os.environ.get("PIPELINE_DIR", "."))
+    failed_logs_dir = pipeline_dir / "failed_logs"
+    failed_logs_dir.mkdir(exist_ok=True)
+
+    # Create unique failed file name based on input file
+    input_basename = Path(tsv_file_path).name
+    failed_file_path = failed_logs_dir / f"{input_basename}.failed"
+
     try:
         download_ftp(mzml_file=mzml_file, local_path=local_file)
     except error_perm as e:
         mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
-        Path(f"{tsv_file_path}.failed").write_text(
-            f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed."
-        )
-        print(f"Wrote {tsv_file_path}.failed")
-        raise e
+        error_msg = f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed.\nError: {str(e)}"
+        failed_file_path.write_text(error_msg)
+        print(f"Wrote {failed_file_path}")
+        return False  # Return False instead of raising exception
 
     if mzml_file.endswith(".mzML"):
         parser = mzml.MzML
@@ -84,37 +95,51 @@ def process_mzml_group(tsv_file_path):
         parser = mzxml.MzXML
         id_fmt_l = ["%i"]
     else:
-        raise ValueError(f"Unsupported file type: {mzml_file}")
+        error_msg = f"Unsupported file type: {mzml_file}"
+        failed_file_path.write_text(error_msg)
+        print(f"Wrote {failed_file_path}")
+        return False
 
-    mzml_reader = parser(local_file)
-    for i, id_fmt in enumerate(id_fmt_l):
-        formatted_scan_numbers = df["scan"].map(lambda x: id_fmt % x)
-        try:
-            spectra = mzml_reader.get_by_ids(formatted_scan_numbers)
-            break  # on success, stop trying and don't execute the else statement
-        except KeyError:
-            continue
-    else:
-        # This runs only if the loop never break'ed
-        Path(f"{tsv_file_path}.failed").write_text(
-            f"Tried to get scans with {id_fmt_l} from {mzml_file} resulted in a KeyError"
+    try:
+        mzml_reader = parser(local_file)
+        for i, id_fmt in enumerate(id_fmt_l):
+            formatted_scan_numbers = df["scan"].map(lambda x: id_fmt % x)
+            try:
+                spectra = mzml_reader.get_by_ids(formatted_scan_numbers)
+                break  # on success, stop trying and don't execute the else statement
+            except KeyError:
+                continue
+        else:
+            # This runs only if the loop never break'ed
+            error_msg = f"Tried to get scans with {id_fmt_l} from {mzml_file} resulted in a KeyError"
+            failed_file_path.write_text(error_msg)
+            print(f"Wrote {failed_file_path}")
+            return False
+
+        mgf.write(
+            [
+                mzml_spectrum_to_mgf(s, local_file, pep, scan)
+                for s, pep, scan in zip(spectra, df["annotation"], df["scan"])
+            ],
+            f"{tsv_file_path}.mgf",
+            fragment_format="%.5f %.1f",
+            use_numpy=True,
         )
-        print(f"Wrote {tsv_file_path}.failed")
-        raise
+    except Exception as e:
+        error_msg = f"Error processing {mzml_file}: {str(e)}"
+        failed_file_path.write_text(error_msg)
+        print(f"Wrote {failed_file_path}")
+        return False
+    finally:
+        # Always clean up the downloaded file
+        if Path(local_file).exists():
+            Path(local_file).unlink()
 
-    mgf.write(
-        [
-            mzml_spectrum_to_mgf(s, local_file, pep, scan)
-            for s, pep, scan in zip(spectra, df["annotation"], df["scan"])
-        ],
-        f"{tsv_file_path}.mgf",
-        fragment_format="%.5f %.1f",
-        use_numpy=True,
-    )
-
-    if Path(local_file).exists():
-        Path(local_file).unlink()
+    return True  # Success
 
 
-tsv_file_path = sys.argv[1]
-process_mzml_group(tsv_file_path)
+if __name__ == "__main__":
+    tsv_file_path = sys.argv[1]
+    success = process_mzml_group(tsv_file_path)
+    if not success:
+        sys.exit(1)  # Exit with error code 1 for failures

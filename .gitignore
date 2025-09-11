@@ -10,3 +10,4 @@ work/
 results/
 report-*.html
 trace-*.tsv
+failed_logs/
