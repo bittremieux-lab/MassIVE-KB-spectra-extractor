@@ -62,7 +62,7 @@ process MERGE_MGFS {
 
     script:
     """
-    cat *.mgf > "massiveKB_${task_id}.mgf"
+    find . -maxdepth 1 -name "*.mgf" -print0 | xargs -0 cat > massiveKB_${task_id}.mgf
     """
 }
 
