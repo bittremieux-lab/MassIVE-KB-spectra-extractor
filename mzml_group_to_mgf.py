@@ -79,20 +79,25 @@ def process_mzml_group(tsv_file_path):
 
     if mzml_file.endswith(".mzML"):
         parser = mzml.MzML
-        id_fmt = "controllerType=0 controllerNumber=1 scan=%i"
+        id_fmt_l = ["controllerType=0 controllerNumber=1 scan=%i", "scan=%i"]
     elif mzml_file.endswith(".mzXML"):
         parser = mzxml.MzXML
-        id_fmt = "%i"
+        id_fmt_l = ["%i"]
     else:
         raise ValueError(f"Unsupported file type: {mzml_file}")
 
     mzml_reader = parser(local_file)
-    formatted_scan_numbers = df["scan"].map(lambda x: id_fmt % x)
-    try:
-        spectra = mzml_reader.get_by_ids(formatted_scan_numbers)
-    except KeyError:
+    for i, id_fmt in enumerate(id_fmt_l):
+        formatted_scan_numbers = df["scan"].map(lambda x: id_fmt % x)
+        try:
+            spectra = mzml_reader.get_by_ids(formatted_scan_numbers)
+            break  # on success, stop trying and don't execute the else statement
+        except KeyError:
+            continue
+    else:
+        # This runs only if the loop never break'ed
         Path(f"{tsv_file_path}.failed").write_text(
-            f"Trying to get {formatted_scan_numbers} from {mzml_file} resulted in a KeyError"
+            f"Tried to get scans with {id_fmt_l} from {mzml_file} resulted in a KeyError"
         )
         print(f"Wrote {tsv_file_path}.failed")
         raise
