@@ -99,7 +99,7 @@ process CLEAN_FAILED_LOGS_DIR {
     # This ensures that previously failed files that now succeed are properly removed
     if [ -d "${projectDir}/failed_logs" ]; then
         echo "Cleaning existing failed_logs directory..."
-        rm -rf ${projectDir}/failed_logs/*.failed 2>/dev/null || true
+        rm -rf ${projectDir}/failed_logs/*.csv 2>/dev/null || true
         echo "Failed logs directory cleaned"
     else
         echo "No failed_logs directory to clean"
@@ -115,35 +115,29 @@ process COLLECT_FAILED_LOGS {
         val mgf_processing_done  // Dependency to ensure this runs after MGF processing
 
     output:
-        path "all_failed_logs.txt", optional: true
+        path "failed_processes.csv", optional: true
 
     publishDir "results", mode: 'copy'
 
     script:
     """
-    echo "=== FAILED PROCESSES SUMMARY ===" > all_failed_logs.txt
-    echo "Generated on: \$(date)" >> all_failed_logs.txt
-    echo "" >> all_failed_logs.txt
-
     # Check if failed_logs directory exists and has files in the pipeline directory
-    if [ -d "${projectDir}/failed_logs" ] && [ \$(ls ${projectDir}/failed_logs/*.failed 2>/dev/null | wc -l) -gt 0 ]; then
-        failed_count=\$(ls ${projectDir}/failed_logs/*.failed | wc -l)
-        echo "Total failed files: \$failed_count" >> all_failed_logs.txt
-        echo "" >> all_failed_logs.txt
+    if [ -d "${projectDir}/failed_logs" ] && [ \$(ls ${projectDir}/failed_logs/*.csv 2>/dev/null | wc -l) -gt 0 ]; then
+        # Create CSV header
+        echo "mzml_file,error_message,spectra_count" > failed_processes.csv
 
-        for failed_file in ${projectDir}/failed_logs/*.failed; do
+        # Merge all CSV files
+        for failed_file in ${projectDir}/failed_logs/*.csv; do
             if [ -f "\$failed_file" ]; then
-                echo "=== FAILURE: \$(basename \$failed_file) ===" >> all_failed_logs.txt
-                cat "\$failed_file" >> all_failed_logs.txt
-                echo "" >> all_failed_logs.txt
-                echo "---" >> all_failed_logs.txt
-                echo "" >> all_failed_logs.txt
+                cat "\$failed_file" >> failed_processes.csv
             fi
         done
+
+        failed_count=\$(ls ${projectDir}/failed_logs/*.csv | wc -l)
+        echo "Merged \$failed_count failed process CSV files"
     else
-        echo "No failed files found" >> all_failed_logs.txt
-        # Remove the file if no failures to avoid confusion
-        rm all_failed_logs.txt
+        echo "No failed files found"
+        # Don't create the file if no failures
     fi
     """
 }
@@ -172,7 +166,7 @@ process CREATE_PROCESSING_SUMMARY {
 
     # Count failed files from persistent directory in pipeline directory
     if [ -d "${projectDir}/failed_logs" ]; then
-        failed_files=\$(ls ${projectDir}/failed_logs/*.failed 2>/dev/null | wc -l)
+        failed_files=\$(ls ${projectDir}/failed_logs/*.csv 2>/dev/null | wc -l)
     else
         failed_files=0
     fi
@@ -196,9 +190,9 @@ process CREATE_PROCESSING_SUMMARY {
 
     if [ \$failed_files -gt 0 ]; then
         echo "=== FAILED FILES ===" >> processing_summary.txt
-        for failed_file in ${projectDir}/failed_logs/*.failed; do
+        for failed_file in ${projectDir}/failed_logs/*.csv; do
             if [ -f "\$failed_file" ]; then
-                basename "\$failed_file" .failed >> processing_summary.txt
+                basename "\$failed_file" .csv >> processing_summary.txt
             fi
         done
     fi

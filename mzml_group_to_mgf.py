@@ -62,10 +62,19 @@ def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
     return mgf_spectrum
 
 
+def write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count):
+    """Write failure information as a single CSV row"""
+    # Escape quotes in error message for CSV format
+    error_msg_escaped = error_msg.replace('"', '""')
+    csv_row = f'"{mzml_file}","{error_msg_escaped}",{spectra_count}\n'
+    failed_file_path.write_text(csv_row)
+
+
 def process_mzml_group(tsv_file_path):
     df = pd.read_csv(tsv_file_path, sep="\t")
     mzml_file = df.loc[0, "filename"]
     local_file = Path(mzml_file).name
+    spectra_count = len(df)  # Get number of spectra from dataframe length
 
     # Create persistent failed logs directory in the main pipeline directory
     # Get pipeline directory from environment variable set by Nextflow
@@ -75,16 +84,16 @@ def process_mzml_group(tsv_file_path):
     failed_logs_dir = pipeline_dir / "failed_logs"
     failed_logs_dir.mkdir(exist_ok=True)
 
-    # Create unique failed file name based on input file
+    # Create unique failed file name based on input file (now .csv extension)
     input_basename = Path(tsv_file_path).name
-    failed_file_path = failed_logs_dir / f"{input_basename}.failed"
+    failed_file_path = failed_logs_dir / f"{input_basename}.csv"
 
     try:
         download_ftp(mzml_file=mzml_file, local_path=local_file)
     except error_perm as e:
         mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
-        error_msg = f"Tried getting\n{mzml_file}\nfrom {mskb_version} and x01 failed.\nError: {str(e)}"
-        failed_file_path.write_text(error_msg)
+        error_msg = f"Tried getting {mzml_file} from {mskb_version} and x01 failed. Error: {str(e)}"
+        write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count)
         print(f"Wrote {failed_file_path}")
         return False  # Return False instead of raising exception
 
@@ -96,7 +105,7 @@ def process_mzml_group(tsv_file_path):
         id_fmt_l = ["%i"]
     else:
         error_msg = f"Unsupported file type: {mzml_file}"
-        failed_file_path.write_text(error_msg)
+        write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count)
         print(f"Wrote {failed_file_path}")
         return False
 
@@ -112,7 +121,7 @@ def process_mzml_group(tsv_file_path):
         else:
             # This runs only if the loop never break'ed
             error_msg = f"Tried to get scans with {id_fmt_l} from {mzml_file} resulted in a KeyError"
-            failed_file_path.write_text(error_msg)
+            write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count)
             print(f"Wrote {failed_file_path}")
             return False
 
@@ -127,7 +136,7 @@ def process_mzml_group(tsv_file_path):
         )
     except Exception as e:
         error_msg = f"Error processing {mzml_file}: {str(e)}"
-        failed_file_path.write_text(error_msg)
+        write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count)
         print(f"Wrote {failed_file_path}")
         return False
     finally:
