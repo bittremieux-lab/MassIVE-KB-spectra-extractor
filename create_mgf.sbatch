@@ -6,4 +6,4 @@
 
 source activate nf-env
 
-nextflow main.nf -entry extract_psms --task_id 3cac03860ff7453a821332ab4cff20f4 -resume -with-trace trace-$(date +%Y%m%d-%H%M%S).tsv -with-report report-$(date +%Y%m%d-%H%M%S).html
+nextflow main.nf --task_id 3cac03860ff7453a821332ab4cff20f4 -resume -with-trace trace-$(date +%Y%m%d-%H%M%S).tsv -with-report report-$(date +%Y%m%d-%H%M%S).html

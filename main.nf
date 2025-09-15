@@ -185,7 +185,8 @@ process CREATE_PROCESSING_SUMMARY {
     echo "Failed: \$failed_files" >> processing_summary.txt
 
     if [ \$total_files -gt 0 ]; then
-        success_rate=\$(echo "scale=2; \$successful_files * 100 / \$total_files" | bc -l)
+        # Calculate success rate using shell arithmetic (avoiding bc dependency)
+        success_rate=\$(( successful_files * 100 / total_files ))
         echo "Success rate: \${success_rate}%" >> processing_summary.txt
     else
         echo "Success rate: 0%" >> processing_summary.txt
