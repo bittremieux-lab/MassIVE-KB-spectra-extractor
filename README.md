@@ -45,7 +45,7 @@ The pipeline consists of several key processes:
 Due to inconsistencies in mzML/mzXML files and MassIVE-KB **MZML_GROUP_TO_MGF** might fail unexpectedly. 
 This pipeline is designed so all successful **MZML_GROUP_TO_MGF** processes are reused from cache when 
 rerunning with the same task_id and the -resume flag. At the same time, an overview of failed processes is generated
-in `results/failed_processes.csv`. These issues can be solved by editing `mzml_group_to_mgf.py`. 
+in `results_YOUR_TASK_ID/failed_processes.csv`. These issues can be solved by editing `mzml_group_to_mgf.py`. 
 Edits to any other files might invalidate the cached versions of successful **MZML_GROUP_TO_MGF** processes.
 
 
@@ -58,11 +58,11 @@ Edits to any other files might invalidate the cached versions of successful **MZ
 
 2. **Check failures**: Review processing summary and failed logs
    ```bash
-   # Check overall results
-   cat results/processing_summary.txt
+   # Check overall results (replace YOUR_TASK_ID with actual task ID)
+   cat results_YOUR_TASK_ID/processing_summary.txt
    
    # Review specific failures
-   cat results/all_failed_logs.txt
+   cat results_YOUR_TASK_ID/failed_processes.csv
    ```
 
 3. **Fix issues**: Update the Python script to handle specific error cases

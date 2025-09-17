@@ -81,7 +81,8 @@ def process_mzml_group(tsv_file_path):
     import os
 
     pipeline_dir = Path(os.environ.get("PIPELINE_DIR", "."))
-    failed_logs_dir = pipeline_dir / "failed_logs"
+    task_id = os.environ.get("TASK_ID", "unknown")
+    failed_logs_dir = pipeline_dir / f"failed_logs_{task_id}"
     failed_logs_dir.mkdir(exist_ok=True)
 
     # Create unique failed file name based on input file (now .csv extension)
