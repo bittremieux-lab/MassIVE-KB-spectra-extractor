@@ -10,7 +10,18 @@ from pyteomics import mzml, mzxml, mgf
 FTP_REPLACEMENTS = {"MSV000083508/ccms_peak_centroided": "MSV000083508/ccms_peak"}
 
 
+def fix_MSV000080620(mzml_file):
+    if "MSV000080620/ccms_peak/RAW/" in mzml_file:
+        f = mzml_file.split("/")[3]
+        day, a, b, c, d, e, ext = f.split("_")
+        d0 = d[:3]
+        f = f.replace(".mzML", ".mzXML")
+        mzml_file = f"MSV000080620/ccms_peak/{d0}/{d}/{f}"
+    return mzml_file
+
+
 def _download(mskb_version, mzml_file, ftp_host, out_f):
+    mzml_file = fix_MSV000080620(mzml_file)
     for k, v in FTP_REPLACEMENTS.items():
         if k in mzml_file:
             mzml_file = mzml_file.replace(k, v)
