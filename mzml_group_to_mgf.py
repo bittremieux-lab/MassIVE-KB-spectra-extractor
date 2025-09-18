@@ -1,4 +1,5 @@
 # !/usr/bin/env python3
+import os
 import sys
 from ftplib import FTP, error_perm
 from pathlib import Path
@@ -6,8 +7,14 @@ from pathlib import Path
 import pandas as pd
 from pyteomics import mzml, mzxml, mgf
 
+FTP_REPLACEMENTS = {"MSV000083508/ccms_peak_centroided": "MSV000083508/ccms_peak"}
+
 
 def _download(mskb_version, mzml_file, ftp_host, out_f):
+    for k, v in FTP_REPLACEMENTS.items():
+        if k in mzml_file:
+            mzml_file = mzml_file.replace(k, v)
+            break
     remote_path = f"{mskb_version}/{mzml_file}"
     ftp_host.retrbinary(f"RETR {remote_path}", out_f.write)
 
@@ -78,8 +85,6 @@ def process_mzml_group(tsv_file_path):
 
     # Create persistent failed logs directory in the main pipeline directory
     # Get pipeline directory from environment variable set by Nextflow
-    import os
-
     pipeline_dir = Path(os.environ.get("PIPELINE_DIR", "."))
     task_id = os.environ.get("TASK_ID", "unknown")
     failed_logs_dir = pipeline_dir / f"failed_logs_{task_id}"
