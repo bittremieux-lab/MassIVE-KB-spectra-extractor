@@ -74,10 +74,13 @@ process MERGE_MGFS {
 
     script:
     """
-    if [ \$(ls *.mgf 2>/dev/null | wc -l) -gt 0 ]; then
-        find . -maxdepth 1 -name "*.mgf" ! -name "massiveKB_${task_id}.mgf" -print0 \
-        | xargs -0 cat > massiveKB_${task_id}.mgf
-        echo "Merged \$(ls *.mgf | wc -l) MGF files"
+    # Use find to handle large numbers of MGF files (avoiding ls *.mgf which fails with too many files)
+    mgf_count=\$(find . -maxdepth 1 -name "*.mgf" ! -name "massiveKB_${task_id}.mgf" | wc -l)
+
+    if [ \$mgf_count -gt 0 ]; then
+        # Use find with xargs to safely handle large numbers of files
+        find . -maxdepth 1 -name "*.mgf" ! -name "massiveKB_${task_id}.mgf" -print0 | xargs -0 cat > massiveKB_${task_id}.mgf
+        echo "Merged \$mgf_count MGF files into massiveKB_${task_id}.mgf"
     else
         echo "No MGF files to merge"
         touch massiveKB_${task_id}.mgf
@@ -168,7 +171,7 @@ process CREATE_PROCESSING_SUMMARY {
     echo "" >> processing_summary.txt
 
     # Count successful MGF files
-    successful_files=\$(ls *.mgf 2>/dev/null | wc -l)
+    successful_files=\$(find . -maxdepth 1 -name "*.mgf" | wc -l)
 
     # Count failed files from persistent directory in pipeline directory
     if [ -d "${projectDir}/failed_logs_${task_id}" ]; then
