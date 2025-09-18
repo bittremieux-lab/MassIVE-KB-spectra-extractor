@@ -154,7 +154,53 @@ def process_mzml_group(tsv_file_path):
 
 
 if __name__ == "__main__":
-    tsv_file_path = sys.argv[1]
-    success = process_mzml_group(tsv_file_path)
-    if not success:
-        sys.exit(1)  # Exit with error code 1 for failures
+    try:
+        tsv_file_path = sys.argv[1]
+        success = process_mzml_group(tsv_file_path)
+        if not success:
+            sys.exit(1)  # Exit with error code 1 for failures
+    except Exception as e:
+        # General exception handler to catch any unexpected errors
+        try:
+            # Try to get basic information for error logging
+            tsv_file_path = sys.argv[1] if len(sys.argv) > 1 else "unknown_file"
+
+            # Try to read the TSV file to get mzml_file and spectra_count
+            try:
+                df = pd.read_csv(tsv_file_path, sep="\t")
+                mzml_file = df.loc[0, "filename"]
+                spectra_count = len(df)
+            except:
+                # If we can't read the file, use fallback values
+                mzml_file = "unknown_mzml_file"
+                spectra_count = 0
+
+            # Set up failed logs directory
+            pipeline_dir = Path(os.environ.get("PIPELINE_DIR", "."))
+            task_id = os.environ.get("TASK_ID", "unknown")
+            failed_logs_dir = pipeline_dir / f"failed_logs_{task_id}"
+            failed_logs_dir.mkdir(exist_ok=True)
+
+            # Create failed file path
+            input_basename = Path(tsv_file_path).name
+            failed_file_path = failed_logs_dir / f"{input_basename}.csv"
+
+            # Write the exception details to failed logs
+            error_msg = f"Unexpected exception in mzml_group_to_mgf: {type(e).__name__}: {str(e)}"
+            write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count)
+            print(f"Unexpected exception caught and logged to {failed_file_path}")
+            print(f"Exception: {type(e).__name__}: {str(e)}")
+
+        except Exception as logging_error:
+            # If even the error logging fails, print to stderr
+            print(
+                f"Critical error: Failed to log exception. Original error: {type(e).__name__}: {str(e)}",
+                file=sys.stderr,
+            )
+            print(
+                f"Logging error: {type(logging_error).__name__}: {str(logging_error)}",
+                file=sys.stderr,
+            )
+
+        # Always exit with code 1 for any exception
+        sys.exit(1)
