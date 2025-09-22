@@ -20,26 +20,27 @@ def fix_MSV000080620(mzml_file):
     return mzml_file
 
 
-def _download(mskb_version, mzml_file, ftp_host, out_f):
+def _download(mskb_version, mzml_file, ftp_host):
     mzml_file = fix_MSV000080620(mzml_file)
     for k, v in FTP_REPLACEMENTS.items():
         if k in mzml_file:
             mzml_file = mzml_file.replace(k, v)
             break
     remote_path = f"{mskb_version}/{mzml_file}"
-    ftp_host.retrbinary(f"RETR {remote_path}", out_f.write)
-    return mzml_file
+    local_file = Path(mzml_file).name
+    with open(local_file, "wb") as out_f:
+        ftp_host.retrbinary(f"RETR {remote_path}", out_f.write)
+    return mzml_file, local_file
 
 
-def download_ftp(host="massive-ftp.ucsd.edu", mzml_file=None, local_path=None):
+def download_ftp(host="massive-ftp.ucsd.edu", mzml_file=None):
     with FTP(host) as ftp:
         ftp.login()  # Anonymous login
-        with open(local_path, "wb") as f:
-            mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
-            try:
-                return _download(mskb_version, mzml_file, ftp, f)
-            except error_perm as e:
-                return _download("x01", mzml_file, ftp, f)
+        mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
+        try:
+            return _download(mskb_version, mzml_file, ftp)
+        except error_perm as e:
+            return _download("x01", mzml_file, ftp)
 
 
 def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
@@ -107,7 +108,7 @@ def process_mzml_group(tsv_file_path):
     failed_file_path = failed_logs_dir / f"{input_basename}.csv"
 
     try:
-        mzml_file = download_ftp(mzml_file=mzml_file, local_path=local_file)
+        mzml_file, local_file = download_ftp(mzml_file=mzml_file)
     except error_perm as e:
         mskb_version = "z01" if "ccms_peak" in mzml_file else "v01"
         error_msg = f"Tried getting {mzml_file} from {mskb_version} and x01 failed. Error: {str(e)}"
