@@ -43,7 +43,7 @@ def download_ftp(host="massive-ftp.ucsd.edu", mzml_file=None):
             return _download("x01", mzml_file, ftp)
 
 
-def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
+def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan, charge):
     mgf_spectrum = {
         "m/z array": spectrum["m/z array"],
         "intensity array": spectrum["intensity array"],
@@ -58,7 +58,7 @@ def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
         elif "possible charge state" in precursor_ion:
             precursor_charge = int(precursor_ion["possible charge state"])
         else:
-            precursor_charge = None
+            precursor_charge = charge
         retention_time = spectrum["scanList"]["scan"][0].get("scan start time", -1)
 
     elif mzml_file_name.endswith(".mzXML"):
@@ -68,7 +68,7 @@ def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan):
         if "precursorCharge" in spectrum["precursorMz"][0]:
             precursor_charge = spectrum["precursorMz"][0]["precursorCharge"]
         else:
-            precursor_charge = None
+            precursor_charge = charge
     else:
         raise ValueError(f"Unsupported file type: {mzml_file_name}")
 
@@ -93,7 +93,6 @@ def write_failure_csv(failed_file_path, mzml_file, error_msg, spectra_count):
 def process_mzml_group(tsv_file_path):
     df = pd.read_csv(tsv_file_path, sep="\t")
     mzml_file = df.loc[0, "filename"]
-    local_file = Path(mzml_file).name
     spectra_count = len(df)  # Get number of spectra from dataframe length
 
     # Create persistent failed logs directory in the main pipeline directory
@@ -147,7 +146,9 @@ def process_mzml_group(tsv_file_path):
         mgf.write(
             [
                 mzml_spectrum_to_mgf(s, local_file, pep, scan)
-                for s, pep, scan in zip(spectra, df["annotation"], df["scan"])
+                for s, pep, scan, charge in zip(
+                    spectra, df["annotation"], df["scan"], df["charge"]
+                )
             ],
             f"{tsv_file_path}.mgf",
             fragment_format="%.5f %.1f",
