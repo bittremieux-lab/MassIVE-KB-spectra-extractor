@@ -145,7 +145,7 @@ def process_mzml_group(tsv_file_path):
 
         mgf.write(
             [
-                mzml_spectrum_to_mgf(s, local_file, pep, scan)
+                mzml_spectrum_to_mgf(s, local_file, pep, scan, charge)
                 for s, pep, scan, charge in zip(
                     spectra, df["annotation"], df["scan"], df["charge"]
                 )
