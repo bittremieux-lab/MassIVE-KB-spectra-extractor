@@ -59,10 +59,21 @@ def mzml_spectrum_to_mgf(spectrum, mzml_file_name, modified_peptide, scan, charg
             precursor_charge = int(precursor_ion["possible charge state"])
         else:
             precursor_charge = charge
-        retention_time = spectrum["scanList"]["scan"][0].get("scan start time", -1)
+
+        if "scan start time" in spectrum["scanList"]["scan"][0]:
+            retention_time = spectrum["scanList"]["scan"][0]["scan start time"]
+            if retention_time.unit_info == "minute":
+                retention_time *= 60
+            elif retention_time.unit_info != "second":
+                raise RuntimeError(
+                    f"Unknown retention time unit {retention_time.unit_info}"
+                )
+        else:
+            retention_time = -1
 
     elif mzml_file_name.endswith(".mzXML"):
-        retention_time = spectrum.get("retentionTime", -1)
+        # mzXML reader returns retentionTime in minutes, we convert to seconds
+        retention_time = spectrum.get("retentionTime", -1.0 / 60) * 60
 
         precursor_mz = spectrum["precursorMz"][0]["precursorMz"]
         if "precursorCharge" in spectrum["precursorMz"][0]:
